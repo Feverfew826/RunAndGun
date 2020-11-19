@@ -4,28 +4,77 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class RunAndGunGameMode : JumpAndReachGameMode,
-    TriggerVolume.GameRule
+    TriggerVolume.GameRule,
+    Gun.GameRule,
+    GunSlinger.GameRule,
+    Bullet.GameRule
 {
-    protected override void InjectOnAwake()
+    enum BulletHandleType
     {
-        base.InjectOnAwake();
-        TriggerVolume.gameRule = this;
+        Bullet
     }
-    void TriggerVolume.GameRule.OnTriggerEnter2D(TriggerVolume triggerVolume, TriggerVolume.Type type, Collider2D collision)
+    private Dictionary<GameObject, BulletHandleType> bulletHandleTypeCache = null;
+
+
+
+    void OnEnable()
+    {
+        InjectRule();
+    }
+
+    void OnDisable()
+    {
+        ClearRule();
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        bulletHandleTypeCache = new Dictionary<GameObject, BulletHandleType>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
+
+    protected override void InjectRule()
+    {
+        base.InjectRule();
+        TriggerVolume.gameRule = this;
+        GunSlinger.gameRule = this;
+        Gun.gameRule = this;
+        Bullet.gameRule = this;
+    }
+
+    protected override void ClearRule()
+    {
+        base.ClearRule();
+        TriggerVolume.gameRule = null;
+        GunSlinger.gameRule = null;
+        Gun.gameRule = null;
+        Bullet.gameRule = null;
+    }
+
+    void TriggerVolume.GameRule.OnEnter(TriggerVolume triggerVolume, Collider2D collision)
     {
         MyPlayer myPlayer = collision.GetComponent<MyPlayer>();
         if (myPlayer != null)
         {
-            switch (type)
+            switch (triggerVolume.type)
             {
                 case TriggerVolume.Type.Death:
-                    OnTriggerEnter2DDeath(triggerVolume, collision);
+                    OnEnterDeath(triggerVolume, collision);
                     break;
                 case TriggerVolume.Type.Win:
-                    OnTriggerEnter2DWin(triggerVolume, collision);
+                    OnEnterWin(triggerVolume, collision);
                     break;
-                case TriggerVolume.Type.Weapon:
-                    OnTriggerEnter2DWeapon(triggerVolume, collision);
+                case TriggerVolume.Type.Gun:
+                    OnEnterGun(triggerVolume, collision);
+                    break;
+                case TriggerVolume.Type.BulletBundle:
+                    OnEnterBulletBundle(triggerVolume, collision);
                     break;
                 default:
                     break;
@@ -33,31 +82,95 @@ public class RunAndGunGameMode : JumpAndReachGameMode,
         }
     }
 
-    protected void OnTriggerEnter2DWeapon(TriggerVolume triggerVolume, Collider2D collision)
+    protected void OnEnterGun(TriggerVolume triggerVolume, Collider2D collision)
     {
-        MyPlayer myPlayer = collision.GetComponent<MyPlayer>();
-        if (myPlayer != null)
+        GunSlinger gunSlinger = collision.GetComponent<GunSlinger>();
+        if (gunSlinger != null)
         {
-            Gun gun = triggerVolume.GetComponent<Gun>();
-            myPlayer.Equip(gun);
+            Gun gun = triggerVolume.GetComponentInParent<Gun>();
+            Destroy(triggerVolume.gameObject);
+
+            gunSlinger.Equip(gun);
         }
     }
 
-    void Awake()
+    protected void OnEnterBulletBundle(TriggerVolume triggerVolume, Collider2D collision)
     {
-        InjectOnAwake();
+        GunSlinger gunSlinger = collision.GetComponent<GunSlinger>();
+        if (gunSlinger != null)
+        {
+            BulletBundle bulletBundle = triggerVolume.GetComponentInParent<BulletBundle>();
+            Destroy(triggerVolume.gameObject);
+
+            gunSlinger.AddBullet(new Gun.BulletInfo(bulletBundle.bulletPrefab, bulletBundle.num));
+            Destroy(bulletBundle.gameObject);
+        }
     }
 
-    // Start is called before the first frame update
-    void Start()
+    public void OnFire(Gun gun, GameObject bulletPrefab)
     {
-
+        switch(gun.modelName)
+        {
+            case Gun.ModelName.MyLittleGun:
+                HandleBullet(bulletPrefab, gun.transform.position, gun.transform.rotation, 1000);
+                break;
+            default:
+                break;
+        }
     }
 
-
-    // Update is called once per frame
-    void Update()
+    public void HandleBullet(GameObject bulletPrefab, Vector3 position, Quaternion rotation, float power)
     {
-        
+        BulletHandleType bulletHandleType;
+        if (bulletHandleTypeCache.TryGetValue(bulletPrefab, out bulletHandleType))
+        {
+            switch(bulletHandleType)
+            {
+                case BulletHandleType.Bullet:
+                    Bullet.Shoot(bulletPrefab, position, rotation, power);
+                    break;
+                default:
+                    Debug.Log("Not implemented!");
+                    break;
+            }
+        }
+        else
+        {
+            if (bulletPrefab.GetComponent<Bullet>())
+                bulletHandleTypeCache.Add(bulletPrefab, BulletHandleType.Bullet);
+        }
+    }
+
+    void GunSlinger.GameRule.OnUnequip(Gun gun)
+    {
+        gun.GetComponent<Rigidbody2D>().AddForce(Vector2.up * 200);
+
+        GameObject newGo = new GameObject("TriggerVolume");
+
+        TriggerVolume triggerVolume = newGo.AddComponent<TriggerVolume>();
+        triggerVolume.type = TriggerVolume.Type.Gun;
+
+        BoxCollider2D boxCollider = newGo.AddComponent<BoxCollider2D>();
+        boxCollider.enabled = false;
+        boxCollider.isTrigger = true;
+        boxCollider.size = gun.GetComponent<BoxCollider2D>().size;
+
+        newGo.transform.parent = gun.transform;
+        newGo.transform.localPosition = Vector3.zero;
+
+        triggerVolume.EnableTriggerAfterSeconds(3);
+    }
+
+    public void OnHit(Bullet bullet, Collision2D collision)
+    {
+        if(collision.relativeVelocity.magnitude > 1)
+        {
+            Destroy(bullet.gameObject);
+        }
+    }
+
+    public bool RegisterBullet(GameObject bulletPrefab)
+    {
+        return false;
     }
 }

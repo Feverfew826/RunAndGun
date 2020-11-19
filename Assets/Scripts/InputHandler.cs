@@ -12,7 +12,7 @@ public class InputHandler : MonoBehaviour
     }
     public interface GameRule
     {
-        bool HasPermission(InputHandler inputHandler, Type type);
+        bool HasPermission(InputHandler inputHandler);
     }
     static public GameRule gameRule;
 
@@ -23,6 +23,8 @@ public class InputHandler : MonoBehaviour
         void OnHorizontalAxis(float horizontalAxis);
         void OnVerticalAxis(float verticalAxis);
         void OnJumpButtonDown();
+        void OnFire1ButtonDown();
+        void OnFire2ButtonDown();
     }
     private HashSet<InputReceiver> inputReceivers;
     private HashSet<InputReceiver> inputReceiverRegisterAwaiters;
@@ -49,7 +51,7 @@ public class InputHandler : MonoBehaviour
         inputReceivers.ExceptWith(inputReceiverUnregisterAwaiters);
         inputReceiverUnregisterAwaiters.Clear();
 
-        if(gameRule != null && gameRule.HasPermission(this, type))
+        if(gameRule != null && gameRule.HasPermission(this))
         {
             foreach(var receiver in inputReceivers)
             {
@@ -58,6 +60,12 @@ public class InputHandler : MonoBehaviour
                 
                 if (Input.GetButtonDown("Jump"))
                     receiver.OnJumpButtonDown();
+
+                if (Input.GetButtonDown("Fire1"))
+                    receiver.OnFire1ButtonDown();
+
+                if (Input.GetButtonDown("Fire2"))
+                    receiver.OnFire2ButtonDown();
             }
         }
     }

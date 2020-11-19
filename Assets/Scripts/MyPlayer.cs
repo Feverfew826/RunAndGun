@@ -15,54 +15,13 @@ public class MyPlayer : MonoBehaviour, InputHandler.InputReceiver
     private Animator animator;
     private SpriteRenderer spriteRenderer;
     public GroundChecker groundChecker;
+    private GunSlinger gunSlinger;
 
     public interface GameRule
     {
         void OnDeath(MyPlayer myPlayer);
     }
     static public GameRule gameRule;
-
-    public void OnHorizontalAxis(float horizontalAxis)
-    {
-        float currentStatusSpeed = speed; 
-
-        if (!groundChecker.isGrounded)
-            currentStatusSpeed *= 0.2f;
-        else if (Mathf.Abs(rigidBody.velocity.magnitude) < 2)
-            currentStatusSpeed *= 2f;
-
-        if (horizontalAxis > 0)
-        {
-            if (rigidBody.velocity.x > 8)
-                currentStatusSpeed *= 0f;
-            spriteRenderer.flipX = false;
-            rigidBody.AddForce(Vector2.right * currentStatusSpeed * Time.deltaTime);
-        }
-        else if (horizontalAxis < 0)
-        {
-            if (rigidBody.velocity.x < -8)
-                currentStatusSpeed *= 0f;
-            spriteRenderer.flipX = true;
-            rigidBody.AddForce(Vector2.left * currentStatusSpeed * Time.deltaTime);
-        }
-    }
-
-    public void Equip(Gun gun)
-    {
-        gun.GetComponent<BoxCollider2D>().enabled = false;
-        gun.transform.parent = transform;
-        gun.transform.localPosition = Vector3.zero;
-    }
-
-    public void OnVerticalAxis(float verticalAxis)
-    {
-    }
-
-    public void OnJumpButtonDown()
-    {
-        if(groundChecker.isGrounded)
-            rigidBody.AddForce(Vector2.up * jumpPower);
-    }
 
     // Start is called before the first frame update
     void Start()
@@ -72,6 +31,7 @@ public class MyPlayer : MonoBehaviour, InputHandler.InputReceiver
         rigidBody = GetComponent<Rigidbody2D>();
         inputHandler = GetComponent<InputHandler>();
         inputHandler.AddInputReceiverRegisterAwaiter(this);
+        gunSlinger = GetComponent<GunSlinger>();
     }
 
     // Update is called once per frame
@@ -96,5 +56,51 @@ public class MyPlayer : MonoBehaviour, InputHandler.InputReceiver
     {
         rigidBody.velocity = Vector2.zero;
         transform.position = position;
+    }
+
+    void InputHandler.InputReceiver.OnHorizontalAxis(float horizontalAxis)
+    {
+        float currentStatusSpeed = speed;
+
+        if (!groundChecker.isGrounded)
+            currentStatusSpeed *= 0.2f;
+        else if (Mathf.Abs(rigidBody.velocity.magnitude) < 2)
+            currentStatusSpeed *= 2f;
+
+        if (horizontalAxis > 0)
+        {
+            if (rigidBody.velocity.x > 8)
+                currentStatusSpeed *= 0f;
+            spriteRenderer.flipX = false;
+            rigidBody.AddForce(Vector2.right * currentStatusSpeed * Time.deltaTime);
+        }
+        else if (horizontalAxis < 0)
+        {
+            if (rigidBody.velocity.x < -8)
+                currentStatusSpeed *= 0f;
+            spriteRenderer.flipX = true;
+            rigidBody.AddForce(Vector2.left * currentStatusSpeed * Time.deltaTime);
+        }
+    }
+    void InputHandler.InputReceiver.OnVerticalAxis(float verticalAxis)
+    {
+
+    }
+    void InputHandler.InputReceiver.OnJumpButtonDown()
+    {
+        if (groundChecker.isGrounded)
+            rigidBody.AddForce(Vector2.up * jumpPower);
+    }
+    void InputHandler.InputReceiver.OnFire1ButtonDown()
+    {
+        if(gunSlinger != null)
+            gunSlinger.Fire();
+    }
+
+
+    public void OnFire2ButtonDown()
+    {
+        if (gunSlinger != null)
+            gunSlinger.Unequip();
     }
 }

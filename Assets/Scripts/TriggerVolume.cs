@@ -8,13 +8,13 @@ public class TriggerVolume : MonoBehaviour
     {
         Death,
         Win,
-        Weapon
+        Gun,
+        BulletBundle
     }
     public interface GameRule
     {
-        void OnTriggerEnter2D(TriggerVolume triggerVolume, Type type, Collider2D collision);
+        void OnEnter(TriggerVolume triggerVolume, Collider2D collision);
     }
-
     static public GameRule gameRule;
 
     public Type type;
@@ -30,9 +30,21 @@ public class TriggerVolume : MonoBehaviour
         
     }
 
+    public void EnableTriggerAfterSeconds(float seconds)
+    {
+        StartCoroutine(DelayedEnableColliderCoroutine(seconds));
+    }
+
+    IEnumerator DelayedEnableColliderCoroutine(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+
+        GetComponent<BoxCollider2D>().enabled = true;
+    }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (gameRule != null)
-            gameRule.OnTriggerEnter2D(this, type, collision);
+            gameRule.OnEnter(this, collision);
     }
 }

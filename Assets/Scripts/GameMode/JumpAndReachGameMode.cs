@@ -10,17 +10,22 @@ public class JumpAndReachGameMode : MonoBehaviour,
 {
     public GameObject startPosition;
 
-    protected virtual void InjectOnAwake()
+    protected virtual void InjectRule()
     {
         InputHandler.gameRule = this;
         TriggerVolume.gameRule = this;
         MyPlayer.gameRule = this;
     }
-
-    void Awake()
+    protected virtual void ClearRule()
     {
-        InjectOnAwake();
+        InputHandler.gameRule = null;
+        TriggerVolume.gameRule = null;
+        MyPlayer.gameRule = null;
+    }
 
+    void OnEnable()
+    {
+        InjectRule();
     }
 
     // Start is called before the first frame update
@@ -53,28 +58,28 @@ public class JumpAndReachGameMode : MonoBehaviour,
         SceneManager.LoadScene(0);
     }
 
-    void TriggerVolume.GameRule.OnTriggerEnter2D(TriggerVolume triggerVolume, TriggerVolume.Type type, Collider2D collision)
+    void TriggerVolume.GameRule.OnEnter(TriggerVolume triggerVolume, Collider2D collision)
     {
-        switch(type)
+        switch(triggerVolume.type)
         {
             case TriggerVolume.Type.Death:
-                OnTriggerEnter2DDeath(triggerVolume, collision);
+                OnEnterDeath(triggerVolume, collision);
                 break;
             case TriggerVolume.Type.Win:
-                OnTriggerEnter2DWin(triggerVolume, collision);
+                OnEnterWin(triggerVolume, collision);
                 break;
             default:
                 break;
         }
     }
-    protected void OnTriggerEnter2DDeath(TriggerVolume triggerVolume, Collider2D collision)
+    protected void OnEnterDeath(TriggerVolume triggerVolume, Collider2D collision)
     {
         MyPlayer myPlayer = collision.GetComponent<MyPlayer>();
         if(myPlayer != null)
             myPlayer.Die();
     }
 
-    protected void OnTriggerEnter2DWin(TriggerVolume triggerVolume, Collider2D collision)
+    protected void OnEnterWin(TriggerVolume triggerVolume, Collider2D collision)
     {
         MyPlayer myPlayer = collision.GetComponent<MyPlayer>();
         if (myPlayer != null)
@@ -86,9 +91,9 @@ public class JumpAndReachGameMode : MonoBehaviour,
     }
 
     public bool playerControlEnable = true;
-    bool InputHandler.GameRule.HasPermission(InputHandler inputHandler, InputHandler.Type type)
+    bool InputHandler.GameRule.HasPermission(InputHandler inputHandler)
     {
-        switch (type)
+        switch (inputHandler.type)
         {
             case InputHandler.Type.Player:
                 return playerControlEnable;
